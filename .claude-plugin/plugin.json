@@ -1,0 +1,19 @@
+{
+  "name": "smooth-demo",
+  "version": "0.1.0",
+  "description": "Record real product demos with gradual scrolling, eased cursor and camera motion, explanatory subtitles, and explicit browser-window layouts.",
+  "author": {
+    "name": "RolandOne"
+  },
+  "homepage": "https://github.com/RolandOne/smooth-demo",
+  "repository": "https://github.com/RolandOne/smooth-demo",
+  "license": "MIT",
+  "keywords": [
+    "demo",
+    "screen-recording",
+    "codex",
+    "claude-code",
+    "skill",
+    "video"
+  ]
+}

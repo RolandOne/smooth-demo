@@ -1,0 +1,25 @@
+{
+  "name": "smooth-demo-marketplace",
+  "owner": {
+    "name": "RolandOne"
+  },
+  "description": "Single-plugin marketplace for the Smooth Demo skill.",
+  "plugins": [
+    {
+      "name": "smooth-demo",
+      "source": ".",
+      "description": "Record real product demos with gradual scrolling, eased cursor and camera motion, explanatory subtitles, and explicit browser-window layouts.",
+      "version": "0.1.0",
+      "category": "creative",
+      "keywords": [
+        "demo",
+        "screen-recording",
+        "codex",
+        "claude-code",
+        "skill",
+        "video"
+      ],
+      "homepage": "https://github.com/RolandOne/smooth-demo"
+    }
+  ]
+}

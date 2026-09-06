@@ -1,0 +1,36 @@
+{
+  "name": "smooth-demo",
+  "version": "0.1.0",
+  "description": "Record real product demos with gradual scrolling, eased cursor and camera motion, explanatory subtitles, and explicit browser-window layouts.",
+  "author": {
+    "name": "RolandOne"
+  },
+  "homepage": "https://github.com/RolandOne/smooth-demo",
+  "repository": "https://github.com/RolandOne/smooth-demo",
+  "license": "MIT",
+  "keywords": [
+    "demo",
+    "screen-recording",
+    "codex",
+    "claude-code",
+    "skill",
+    "video"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Smooth Demo",
+    "shortDescription": "Real app demos with smooth motion and readable captions.",
+    "longDescription": "Plan, capture, style, and review product demos from actual app UI. Includes visible browser tabs, overlapping-window layouts, responsive views, and opt-in narration. Recording requires compatible browser or computer-use tools.",
+    "developerName": "RolandOne",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Record a smooth demo of this app.",
+      "Show two browser tabs with smooth switching.",
+      "Compare desktop and mobile views."
+    ]
+  }
+}

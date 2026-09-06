@@ -1,0 +1,6 @@
+interface:
+  display_name: "Smooth Demo"
+  short_description: "Record real app demos with smooth cursor and zoom effects"
+  default_prompt: "Use $smooth-demo to create a polished demo from the actual app UI, with the default OS wallpaper framing, smooth moving cursor, click pulses, and eased zoom in/out. Default to silent explanatory subtitles below the app window. Only generate OpenAI voiceover when explicitly requested, defaulting to Marin; disclose API key requirements and usage costs before generation. Keep the visual effects in narrated walkthroughs too."
+policy:
+  allow_implicit_invocation: true
