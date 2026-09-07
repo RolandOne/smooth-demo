@@ -1,6 +1,6 @@
 # Narrated executive demo workflow
 
-For new `$smooth-demo` videos, narration extends the default cinematic workflow; it does not replace it. Read `cinematic-motion.md`, style real UI chapters through `scripts/render-motion.py`, then assemble the styled chapters with audio, cards, and captions. Preserve wallpaper, smooth cursor, zoom transitions, and 60 fps during final assembly. Retiming footage requires retiming its cursor/camera events too. A direct raw-frame-to-narration export is incomplete unless the user explicitly requested an unstyled video. Narration-only revisions of an existing video preserve its visuals.
+For new smooth-demo videos, narration extends the default cinematic workflow; it does not replace it. Read `cinematic-motion.md`, style real UI chapters through `scripts/render-motion.py`, then assemble the styled chapters with audio, cards, and captions. Preserve wallpaper, smooth cursor, zoom transitions, and 60 fps during final assembly. Retiming footage requires retiming its cursor/camera events too. A direct raw-frame-to-narration export is incomplete unless the user explicitly requested an unstyled video. Narration-only revisions of an existing video preserve its visuals.
 
 
 Use this workflow for one polished, chaptered product video, or for revising the voice of an existing demo. A video request is not permission to mutate production records, expose private data, deploy changes, or send the result externally.
@@ -9,7 +9,7 @@ Use this workflow for one polished, chaptered product video, or for revising the
 
 Use OpenAI speech generation only when the user explicitly requests voiceover/audio narration. Otherwise produce a silent video with concise timed explanations below the app canvas using the motion renderer's `subtitles` cues. Keep that band outside the camera crop so it never covers controls, including while zoomed.
 
-Before the first speech API call, explicitly disclose that OpenAI voiceover requires an API key and incurs API usage charges separate from ChatGPT/Codex subscription fees. An explicit voiceover request authorizes the requested generation scope; respect any budget constraint and do not repeatedly ask for approval already given. Default to Marin. Missing credentials or service availability must not trigger an unrequested paid or system-voice fallback.
+Before the first speech API call, explicitly disclose that OpenAI voiceover requires an API key and incurs API usage charges separate from any ChatGPT, Codex, or Claude subscription fees. An explicit voiceover request authorizes the requested generation scope; respect any budget constraint and do not repeatedly ask for approval already given. Default to Marin. Missing credentials or service availability must not trigger an unrequested paid or system-voice fallback.
 
 ## 1. Establish the deliverable
 
@@ -38,7 +38,7 @@ Maintain a shot list with: chapter, business outcome, route/persona, exact visib
 - Default to OpenAI Marin (`voice: "marin"`) whenever voiceover is requested and no other voice is explicitly selected. Honor an explicit alternative. Do not ask for a voice choice or generate auditions by default. This default selects the voice; it does not add narration to a silent-video request.
 - If Marin generation is unavailable because of credentials, tooling, or service errors, report that blocker and continue independent visual/script work. Do not silently substitute macOS `say`/Samantha, a Windows system voice, or another provider/voice.
 - Only when the user requests voice comparisons, use the same short 10–20 second introduction, direction, and comparable loudness for the requested voices. Present playable samples and honor the resulting choice.
-- When making OpenAI API calls or quoting current pricing/model/voice support, use the available OpenAI documentation skill and verify official documentation. Do not hardcode current prices or assume an older voice/model list remains valid.
+- When making OpenAI API calls or quoting current pricing/model/voice support, verify against current official OpenAI documentation (the OpenAI documentation skill in Codex; context7 or WebFetch in Claude Code). Do not hardcode current prices or assume an older voice/model list remains valid.
 - Give a cost estimate when requested or when required to resolve a material budget choice. Distinguish an estimate from actual billed usage. Do not impose repeated approval gates after the user has authorized generation within a clear scope.
 - Read the key internally from the user-designated environment or ignored secret file. Never print it, put it in command-line arguments, use a public/client environment variable, copy it into this skill, or include it in artifacts. Redact API error output and never dump credential-bearing request headers.
 

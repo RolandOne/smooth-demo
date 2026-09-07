@@ -23,8 +23,17 @@ export function imageSize(buffer) {
   throw new Error('Unsupported or incomplete captured image');
 }
 
+// `cdp` is either a push-style session exposing send/on/off (a Playwright
+// CDPSession from page.context().newCDPSession(page)) or a polling-style
+// session exposing send/readEvents (the Codex desktop browser). Push frames
+// are serialised through one promise chain; polled frames drain in a pump
+// task. Interaction code runs concurrently in both modes.
 export function createRecorder(cdp, directory) {
-  let running = false, task, cursor, started, failure, requested, stopped, active = false;
+  const push = typeof cdp.on === 'function' && typeof cdp.off === 'function';
+  if (!push && typeof cdp.readEvents !== 'function')
+    throw new Error('cdp must expose on/off (Playwright CDPSession) or readEvents (Codex browser)');
+  let running = false, started, failure, requested, stopped, active = false, task, cursor;
+  let chain = Promise.resolve();
   const frames = [], events = [];
   const elapsed = () => started ? (Date.now() - started) / 1000 : 0;
   const sameSize = (a, b) => a.width === b.width && a.height === b.height;
@@ -35,6 +44,48 @@ export function createRecorder(cdp, directory) {
     await fs.writeFile(path.join(directory, 'capture.json.tmp'), JSON.stringify(manifest, null, 2));
     await fs.rename(path.join(directory, 'capture.json.tmp'), path.join(directory, 'capture.json'));
     return manifest;
+  }
+  async function stopScreencast() {
+    if (!active) return;
+    active = false;
+    if (push) cdp.off('Page.screencastFrame', onFrame);
+    try { await cdp.send('Page.stopScreencast'); } catch (e) { failure ??= e; }
+  }
+  async function handleFrame(p) {
+    if (!running) return;
+    try {
+      const data = Buffer.from(p.data, 'base64');
+      if (!sameSize(imageSize(data), requested)) throw new Error('Screencast dimensions changed; partial take saved');
+      const file = `frame-${String(frames.length).padStart(6, '0')}.jpg`;
+      const frame = { file, time: elapsed() };
+      await fs.writeFile(path.join(directory, file), data);
+      frames.push(frame);
+      await persist('recording');
+    } finally {
+      // Chrome withholds the next frame until the previous one is acknowledged.
+      await cdp.send('Page.screencastFrameAck', { sessionId: p.sessionId });
+    }
+  }
+  function onFrame(p) {
+    chain = chain.then(() => handleFrame(p)).catch(async (e) => {
+      // Record the fault even if stop() already flipped `running`, so a
+      // session dropped mid-take is never reported as a complete capture.
+      failure ??= e;
+      if (!running) return;
+      running = false;
+      await stopScreencast();
+      await persist('interrupted');
+    });
+  }
+  async function pump() {
+    try {
+      while (running) {
+        const batch = await cdp.readEvents({ afterSequence: cursor, methods: ['Page.screencastFrame'], timeoutMs: 500, limit: 100 });
+        cursor = batch.cursor;
+        if (batch.truncated) throw new Error('Capture buffer truncated; partial take saved');
+        for (const event of batch.events) await handleFrame(event.params);
+      }
+    } catch (e) { failure = e; running = false; await persist('interrupted'); }
   }
   return {
     async start({ width = 1440, height = 900 } = {}) {
@@ -50,37 +101,18 @@ export function createRecorder(cdp, directory) {
         const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
         const pixels = imageSize(Buffer.from(shot.data, 'base64'));
         if (!sameSize(requested, actual) || !sameSize(requested, pixels))
-          throw new Error(`Viewport mismatch: requested ${width}x${height}, layout ${actual.width}x${actual.height}, pixels ${pixels.width}x${pixels.height}. Set the browser viewport before recording.`);
-        cursor = (await cdp.readEvents({ methods: ['Page.screencastFrame'] })).cursor;
+          throw new Error(`Viewport mismatch: requested ${width}x${height}, layout ${actual.width}x${actual.height}, pixels ${pixels.width}x${pixels.height}. Set the browser viewport (page.setViewportSize or the host viewport capability) before recording.`);
+        if (!push) cursor = (await cdp.readEvents({ methods: ['Page.screencastFrame'] })).cursor;
         // Timing starts after preflight so setup latency is not footage.
         started = Date.now();
-        await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: width, maxHeight: height, everyNthFrame: 1 });
+        if (push) cdp.on('Page.screencastFrame', onFrame);
         active = true; running = true;
+        await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 95, maxWidth: width, maxHeight: height, everyNthFrame: 1 });
         await persist('recording');
-        task = (async () => {
-          try {
-            while (running) {
-              const batch = await cdp.readEvents({ afterSequence: cursor, methods: ['Page.screencastFrame'], timeoutMs: 500, limit: 100 });
-              cursor = batch.cursor;
-              if (batch.truncated) throw new Error('Capture buffer truncated; partial take saved');
-              for (const event of batch.events) {
-                const p = event.params;
-                try {
-                  const data = Buffer.from(p.data, 'base64');
-                  if (!sameSize(imageSize(data), requested)) throw new Error('Screencast dimensions changed; partial take saved');
-                  const file = `frame-${String(frames.length).padStart(6, '0')}.jpg`;
-                  const frame = { file, time: elapsed() };
-                  await fs.writeFile(path.join(directory, file), data);
-                  frames.push(frame);
-                  await persist('recording');
-                } finally { await cdp.send('Page.screencastFrameAck', { sessionId: p.sessionId }); }
-              }
-            }
-          } catch (e) { failure = e; running = false; await persist('interrupted'); }
-        })();
+        if (!push) task = pump();
       } catch (e) {
         failure = e; running = false;
-        if (active) { try { await cdp.send('Page.stopScreencast'); } catch {} active = false; }
+        await stopScreencast();
         await persist('failed'); throw e;
       }
     },
@@ -94,12 +126,10 @@ export function createRecorder(cdp, directory) {
     async stop({ error } = {}) {
       if (stopped) return stopped;
       running = false;
-      try { await task; } catch (e) { failure ??= e; }
+      if (task) { try { await task; } catch (e) { failure ??= e; } }
+      await stopScreencast();
+      await chain;
       if (error) failure ??= error instanceof Error ? error : new Error(String(error));
-      if (active) {
-        try { await cdp.send('Page.stopScreencast'); } catch (e) { failure ??= e; }
-        active = false;
-      }
       if (!frames.length) failure ??= new Error('No screen frames captured');
       stopped = await persist(failure ? 'interrupted' : 'complete');
       if (failure) throw new Error(`${failure.message}. Recovery: ${path.join(directory, 'capture.json')}`);
@@ -108,8 +138,12 @@ export function createRecorder(cdp, directory) {
   };
 }
 
-// Keep this entire call in one CUA REPL invocation. Pass recorder explicitly.
-export async function recordChapter(cdp, directory, options, actions) {
+// `target` is a Playwright Page (a CDP session is opened for it), a Playwright
+// CDPSession, or a Codex browser cdp object. Pass the recorder to `actions`
+// explicitly; capture stops even when an action throws. Keep start, interact
+// and stop in one process or one CUA REPL invocation: the session dies with it.
+export async function recordChapter(target, directory, options, actions) {
+  const cdp = typeof target.context === 'function' ? await target.context().newCDPSession(target) : target;
   const recorder = createRecorder(cdp, directory);
   await recorder.start(options);
   let actionError;

@@ -36,7 +36,7 @@ The repository also includes a `.codex-plugin/plugin.json` manifest for Codex pl
 - An agent with access to a compatible browser or computer-use tool and the target application.
 - A recorder appropriate to the requested view: tab capture for page content, window/desktop-region capture for visible browser tabs or overlapping windows.
 - Python 3 with Pillow, plus FFmpeg and FFprobe on `PATH` for rendering.
-- Node.js for the CDP capture helper and its tests. The helper consumes a host-provided `cdp.send` / `cdp.readEvents` interface; it does not launch or connect to a browser by itself.
+- Node.js for the CDP capture helper and its tests. The helper accepts a Playwright `Page` or `CDPSession` (push events via `on`/`off`) or the Codex in-app browser object (`readEvents` polling); it does not launch or connect to a browser by itself.
 - A usable system font: the renderer tries macOS SFNS, then DejaVu Sans for captions.
 
 Install the Python dependency in a virtual environment:
@@ -47,7 +47,7 @@ python3 -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Browser APIs and capture capabilities differ by agent host. A Claude Code installation does not automatically provide the Codex desktop browser API. Use an available equivalent recorder and preserve the timed action markers needed for motion rendering.
+Browser APIs and capture capabilities differ by agent host. In Codex the in-app browser supplies the CDP session. In Claude Code, capture from a Playwright node script run via Bash (`chromium.launch()` or `connectOverCDP`), because the Claude Browser pane, claude-in-chrome, and `playwright-cli` expose no CDP screencast; use those for reconnaissance only. Either way, preserve the timed action markers needed for motion rendering.
 
 ## Usage
 

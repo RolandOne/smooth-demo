@@ -17,32 +17,56 @@ Use this mode for Screen Studio-style demos: real UI footage with a wallpaper ca
 
 ## Capture
 
-Use an existing supported tab recorder, or the bundled `scripts/capture-cdp.mjs` with the selected tab's documented CDP capability. Read the current browser capability documentation first. The helper only consumes screencast frames and acknowledges them; browser interactions still use supported UI tools.
+Use the bundled `scripts/capture-cdp.mjs`. `recordChapter` accepts a Playwright `Page` (it opens the CDP session itself), a Playwright `CDPSession`, or the Codex in-app browser CDP object; the recorder detects push (`on`/`off`) versus polling (`readEvents`) sessions. The helper only consumes screencast frames and acknowledges them; interactions run through the host's normal browser API in the same script or invocation.
+
+Claude Code (Playwright node script run via Bash):
+
+```javascript
+import { chromium } from '/absolute/project/node_modules/playwright/index.mjs';
+import { recordChapter } from '/absolute/skill/path/scripts/capture-cdp.mjs';
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.goto('http://localhost:3000/dashboard');
+const manifest = await recordChapter(page, '/absolute/output/take-01',
+  { width: 1440, height: 900 }, async recorder => {
+    // Resolve targets from the current UI and scroll into view before measuring.
+    const box = await page.locator('#email').boundingBox();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    // Mark actual actions; never put passwords or field values in metadata.
+    recorder.mark('move-email', { x, y });
+    await page.mouse.move(x, y, { steps: 24 });
+    // Mark immediately before the real click.
+    recorder.mark('click-email', { x, y, cursor: 'text' });
+    await page.mouse.click(x, y);
+    // Perform further actions and verify the visible result here.
+  });
+await browser.close();
+```
+
+Codex (in-app browser CDP object inside one CUA REPL invocation):
 
 ```javascript
 const { recordChapter } = await import('/absolute/skill/path/scripts/capture-cdp.mjs');
 const manifest = await recordChapter(cdp, '/absolute/output/take-01',
   { width: 1440, height: 900 }, async recorder => {
-    // Resolve targets from current UI and scroll into view before measuring.
-    // Mark actual actions; never put passwords or field values in metadata.
     recorder.mark('move-email', { x: 720, y: 400 });
-    // Move/pace, then mark immediately before the real click.
+    // Move/pace with the supported browser tools, then mark immediately before the real click.
     recorder.mark('click-email', { x: 720, y: 400, cursor: 'text' });
-    // Perform supported browser actions and verify the visible result here.
   });
 ```
 
-Drain frames concurrently while interacting, and stop capture even on an interaction failure. In Codex CUA REPL, start, interact, and stop within the same tool invocation: pending CDP operations lose their execution context when that invocation ends. For adaptive workflows, record one short chapter per invocation and combine their manifests afterward. Never leave a capture pump running between tool calls. `capture.json` stores relative frame paths, wall-clock times, named events, and duration. Screens without pixel changes hold the preceding frame. Avoid capturing passwords in plaintext, credentials in URLs, private autocomplete, account menus, or notifications. Record with fictional data in a verified local/test environment where practical. An app simulator is a different deliverable; do not substitute it silently for the actual app.
+Frames drain concurrently while interacting, and capture stops even when an action throws. Keep start, interact, and stop inside one node process (Claude Code) or one CUA REPL invocation (Codex): the CDP session dies with it, so a take cannot span separate tool calls. For adaptive workflows, record one short chapter per run and combine their manifests afterward. Never leave a capture pump running between tool calls. `capture.json` stores relative frame paths, wall-clock times, named events, and duration. Screens without pixel changes hold the preceding frame. Avoid capturing passwords in plaintext, credentials in URLs, private autocomplete, account menus, or notifications. Record with fictional data in a verified local/test environment where practical. An app simulator is a different deliverable; do not substitute it silently for the actual app.
 
-If Google or another site challenges an isolated automation browser, use an available authorized regular browser session. Do not solve challenges without the required authorization. Do not pass a failed take off as successful footage.
+Headless Chromium draws no native cursor, so there is no duplicate with the rendered pointer. If a logged-in profile is required from Claude Code, start Chrome with `--remote-debugging-port=9222` and use `chromium.connectOverCDP('http://localhost:9222')`. If Google or another site challenges an isolated automation browser, use an available authorized regular browser session. Do not solve challenges without the required authorization. Do not pass a failed take off as successful footage.
 
-The recorder automatically compares requested dimensions, browser layout metrics, and a preflight screenshot before starting, then checks every screencast frame. A mismatch stops the take and writes diagnostics. In the Codex in-app browser use the documented browser `viewport` capability when fixed recording dimensions are needed; a raw CDP emulation override can leave the screencast clipped to the old surface. Re-measure a target after scrolling it into view, before recording its click coordinates.
+The recorder automatically compares requested dimensions, browser layout metrics, and a preflight screenshot before starting, then checks every screencast frame. A mismatch stops the take and writes diagnostics. Set the size before recording with `page.setViewportSize` (or the `viewport` option on `newPage`) in Playwright, or the documented browser `viewport` capability in the Codex in-app browser; a raw CDP emulation override can leave the screencast clipped to the old surface. Re-measure a target after scrolling it into view, before recording its click coordinates.
 
 Join successful chapter manifests without re-encoding using `python3 scripts/join-captures.py /output/combined.json /output/chapter-01/capture.json /output/chapter-02/capture.json`. The combined manifest offsets frames and events and retains chapter boundaries. Do not include failed or rehearsal takes.
 
 ### Scroll and timing implementation
 
-A browser `scroll` method is not evidence of smooth motion: some implementations jump instantly. Prefer a supported continuous native gesture, then verify its captured result. Size command timeouts to exceed the gesture duration (distance divided by speed) plus overhead, especially for returns to the top. Do not shorten or jump a scroll to fit a tool timeout.
+A browser `scroll` method is not evidence of smooth motion: some implementations jump instantly. Prefer a supported continuous native gesture, then verify its captured result. Playwright `page.mouse.wheel` is not reliable for exact distances: Chromium's smooth-scroll animation stacks small deltas, and a 900 px request has been observed to travel roughly three times as far on sites with their own scroll handling. When the landing position matters, drive an eased `requestAnimationFrame` loop that calls `window.scrollTo` on the observed scroll container to the exact target (about 300–400 px/s), then re-measure targets. Size command timeouts to exceed the gesture duration (distance divided by speed) plus overhead, especially for returns to the top. Do not shorten or jump a scroll to fit a tool timeout.
 
 If native continuous gestures are unavailable and wheel-command round trips cause stutter, an allowed page-animation API can drive an eased, requestAnimationFrame-based scroll on the observed scroll container. Keep this confined to scrolling; do not modify product styling or data. Verify source cadence and playback again; support for raw browser commands varies by backend.
 

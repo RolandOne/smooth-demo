@@ -14,7 +14,7 @@ Default approach:
 1. Use the real app route and seeded demo organization.
 2. Script the story as a sequence of visible user actions.
 3. Record the browser tab/window.
-4. Drive the UI with Computer Use or browser automation.
+4. Drive the UI from the same process that records it: a Playwright node script run via Bash in Claude Code, or the in-app browser CDP session in Codex. The script marks cursor targets while `scripts/capture-cdp.mjs` records the tab over CDP.
 5. Render the captured UI with wallpaper framing, smooth cursor motion, click pulses, and eased zoom in/out using `scripts/render-motion.py`.
 6. Review the final styled export, then add narration/captions when requested.
 
@@ -26,11 +26,11 @@ For every new demo, read [references/cinematic-motion.md](references/cinematic-m
 
 Default to a silent video with timed explanatory subtitles in a dedicated band below the app canvas. Describe the visible action/result; keep text outside the app area even during zooms. Supply `subtitles` cues to the motion renderer. Do not generate speech by default.
 
-Generate OpenAI voiceover only when explicitly requested. Before any speech API call, tell the user: "This voiceover uses the OpenAI API, requires an OpenAI API key, and incurs API usage charges separate from your ChatGPT/Codex subscription." Use Marin unless another voice is selected. Honor existing budget/authorization; do not add repeated confirmation gates. If the key or API is unavailable, report that and continue with subtitles; never silently substitute a system voice.
+Generate OpenAI voiceover only when explicitly requested. Before any speech API call, tell the user: "This voiceover uses the OpenAI API, requires an OpenAI API key, and incurs API usage charges separate from your ChatGPT, Codex, or Claude subscription." Use Marin unless another voice is selected. Honor existing budget/authorization; do not add repeated confirmation gates. If the key or API is unavailable, report that and continue with subtitles; never silently substitute a system voice.
 
 ## Default visual contract
 
-Invoking `$smooth-demo` requests the styled video by default; the user does not need to repeat "smooth cursor" or "macOS background". This applies to basic walkthroughs, long videos, and narrated demos too. Only an explicit request for raw footage or a different visual style overrides it. Narration-only revisions preserve the existing visuals unless a visual change is requested.
+Invoking `$smooth-demo` (Codex) or `/smooth-demo` (Claude Code) requests the styled video by default; the user does not need to repeat "smooth cursor" or "macOS background". This applies to basic walkthroughs, long videos, and narrated demos too. Only an explicit request for raw footage or a different visual style overrides it. Narration-only revisions preserve the existing visuals unless a visual change is requested.
 
 - Render real UI footage through `scripts/render-motion.py` (or a verified equivalent that delivers all these effects). Raw capture, a slideshow, chapter bars, or direct FFmpeg narration assembly alone is not the finished smooth demo.
 - Show wallpaper margins around the app at wide framing: Lake Tahoe Day for macOS, Windows 11 Bloom for Windows. Resolve the user's target OS before rendering and write `backgroundPreset: "macos"` or `"windows"` explicitly when the render host differs (for example Linux/WSL/cloud). Retain an explicit custom background choice.
@@ -50,7 +50,7 @@ Use this skill for requests like:
 
 - "Record a demo of this flow."
 - "Make a landing page video using the real app."
-- "Have Codex click through the seeded demo and record it."
+- "Have Codex/Claude click through the seeded demo and record it."
 - "Create a sales demo video / planning demo video."
 - "Use the current tab and screen recording instead of recreating components."
 
@@ -85,9 +85,9 @@ For execution tasks, produce:
 
 ## Tool Preference
 
-- Use Browser or Playwright for deterministic navigation, clicks, forms, and screenshots.
-- Use Computer Use when the task depends on the visible current tab, OS screen recorder, browser chrome, or non-DOM UI.
-- Use Chrome when logged-in profile state or existing authenticated tabs are required.
+- Codex: use the in-app Browser for deterministic navigation, clicks, forms, and screenshots, passing its CDP object to `recordChapter`. Use Computer Use when the task depends on the visible current tab, OS screen recorder, browser chrome, or non-DOM UI. Use Chrome when logged-in profile state or existing authenticated tabs are required.
+- Claude Code: capture with a Playwright node script run via Bash: `chromium.launch()` (or `connectOverCDP` to a Chrome started with `--remote-debugging-port`), `page.setViewportSize`, then `recordChapter(page, ...)`. Playwright resolves from the project `node_modules`; import it by absolute path if the script lives outside the project. The Claude Browser pane, claude-in-chrome, and `playwright-cli` expose no CDP screencast, so use them for reconnaissance only: route checks, selector discovery, shot-list planning.
+- Either host: use Computer Use plus `screencapture -v -R x,y,w,h out.mov` (macOS) for native or non-DOM UI; log marks by hand and feed the video through the renderer's `video` input.
 - If a recording tool is unavailable, produce the shot list and exact operator instructions rather than faking a component demo.
 
 ## Quality Bar

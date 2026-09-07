@@ -43,11 +43,11 @@ Preferred execution pattern:
 
 1. Start recording the current tab/window.
 2. Wait one beat on the starting screen.
-3. Execute the shot list with Browser, Playwright, Chrome, or Computer Use.
+3. Execute the shot list from the same script or invocation that owns the recorder (Playwright in Claude Code, the in-app Browser in Codex), marking each move/click target right before the real action.
 4. Pause on the final success state.
 5. Stop recording.
 
-If using macOS screen recording manually, use QuickTime or Screenshot recording and drive the browser with Codex. If using a CLI recorder, record only the browser region/window when possible.
+If using macOS screen recording manually, use QuickTime or Screenshot recording and drive the browser with Computer Use. If using a CLI recorder, record only the browser region/window when possible.
 
 ## 5. Interaction Guidance
 
