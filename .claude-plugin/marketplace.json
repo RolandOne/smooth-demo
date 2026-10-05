@@ -9,7 +9,7 @@
       "name": "smooth-demo",
       "source": ".",
       "description": "Record real product demos with gradual scrolling, eased cursor and camera motion, explanatory subtitles, and explicit browser-window layouts.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "creative",
       "keywords": [
         "demo",
