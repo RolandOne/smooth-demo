@@ -36,6 +36,7 @@ The repository also includes a `.codex-plugin/plugin.json` manifest for Codex pl
 - An agent with access to a compatible browser or computer-use tool and the target application.
 - A recorder appropriate to the requested view: tab capture for page content, window/desktop-region capture for visible browser tabs or overlapping windows.
 - Python 3 with Pillow, plus FFmpeg and FFprobe on `PATH` for rendering.
+- Optional, for voiceover: an Apple Silicon Mac with [`uv`](https://docs.astral.sh/uv/). Run `skills/smooth-demo/scripts/setup-kokoro.sh` once (about 1.4 GB: a 1.1 GB tool environment and a 341 MB model).
 - Node.js for the CDP capture helper and its tests. The helper accepts a Playwright `Page` or `CDPSession` (push events via `on`/`off`) or the Codex in-app browser object (`readEvents` polling); it does not launch or connect to a browser by itself.
 - A usable system font: the renderer tries macOS SFNS, then DejaVu Sans for captions.
 
@@ -69,7 +70,7 @@ Label the mobile viewport emulation and scroll gradually in both views.
 
 In Claude Code, ask to use the Smooth Demo skill with the same brief.
 
-By default, the output is silent with timed explanatory subtitles. Voiceover is opt-in; the workflow defaults to Marin when speech is requested and requires disclosure of OpenAI API credentials and usage charges before generation.
+By default, the output is silent with timed explanatory subtitles. Voiceover is opt-in and free: when speech is requested the workflow uses the local [Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) model (Apache-2.0, voice `af_heart`) through [mlx-audio](https://github.com/Blaizzy/mlx-audio). It runs on-device with no API key and no usage charges, and needs an Apple Silicon Mac. There is no paid text-to-speech option.
 
 ## Three browser layouts
 
@@ -113,6 +114,8 @@ Start with [SKILL.md](skills/smooth-demo/SKILL.md). Detailed guides:
 | `join-captures.py` | Join completed chapter manifests while preserving action offsets. |
 | `plan-motion.py` | Suggest an editable cursor and camera timeline from action markers. |
 | `render-motion.py` | Render real captures or video with framing, cursor motion, zooms, and subtitles. |
+| `kokoro-narrate.py` | Generate narration clips with the local Kokoro model; caches by text, voice, and speed, and applies pronunciation respellings. |
+| `setup-kokoro.sh` | One-time install of the local Kokoro narration tooling (Apple Silicon). |
 
 Run from the repository root after preparing a capture manifest:
 

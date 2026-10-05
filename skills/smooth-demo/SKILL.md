@@ -1,6 +1,6 @@
 ---
 name: smooth-demo
-description: Create product demo videos from the actual app UI using browser or app-window recording and fictional data, including Screen Studio-style smooth cursor and zoom effects. Use for short workflow clips or long executive approval walkthroughs with a table of contents, chapter cards, OpenAI TTS voice samples or selected-voice narration, synchronized captions, and playback verification. Also use to revise narration on existing demo footage.
+description: Create product demo videos from the actual app UI using browser or app-window recording and fictional data, including Screen Studio-style smooth cursor and zoom effects. Use for short workflow clips or long executive approval walkthroughs with a table of contents, chapter cards, free local Kokoro voice samples or selected-voice narration, synchronized captions, and playback verification. Also use to revise narration on existing demo footage.
 ---
 
 # Smooth Demo
@@ -26,7 +26,7 @@ For every new demo, read [references/cinematic-motion.md](references/cinematic-m
 
 Default to a silent video with timed explanatory subtitles in a dedicated band below the app canvas. Describe the visible action/result; keep text outside the app area even during zooms. Supply `subtitles` cues to the motion renderer. Do not generate speech by default.
 
-Generate OpenAI voiceover only when explicitly requested. Before any speech API call, tell the user: "This voiceover uses the OpenAI API, requires an OpenAI API key, and incurs API usage charges separate from your ChatGPT, Codex, or Claude subscription." Use Marin unless another voice is selected. Honor existing budget/authorization; do not add repeated confirmation gates. If the key or API is unavailable, report that and continue with subtitles; never silently substitute a system voice.
+Generate voiceover only when explicitly requested, using the free local Kokoro model (Hugging Face `mlx-community/Kokoro-82M-bf16`, Apache-2.0) through `mlx-audio`: on-device, no API key, no usage charges. Default voice `af_heart` unless another is selected. This skill has no paid-TTS option: never call the OpenAI speech API or any other paid or cloud TTS service. Setup, voices, pronunciation, and assembly are in `references/executive-narration.md`; generation is `scripts/kokoro-narrate.py`. If Kokoro is not installed, say so and either ask before the one-time download (about 1.4 GB; run `scripts/setup-kokoro.sh`) or continue with subtitles; never silently substitute a system voice. mlx-audio needs an Apple Silicon Mac.
 
 ## Default visual contract
 
